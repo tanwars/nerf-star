@@ -59,6 +59,8 @@ def config_parser():
     parser.add_argument("--ft_path", type=str, default=None, 
                         help='specific weights npy file to reload for coarse network')
 
+    parser.add_argument("--ft_path_trained", type=str, default=None, 
+                        help='trained model from the internet')
     parser.add_argument("--beta", type=float, default=2e-3, 
                         help='regularization coefficient')
 
@@ -217,11 +219,40 @@ def create_nerf_star(args):
 
     ##########################
 
+    # assert args.ft_path_trained is not None, 'check usage please'
+    # ckpt_trained_path = os.path.join(basedir, expname, args.ft_path_trained + '.tar')
+
+    # if args.ft_path is not None and args.ft_path!='None':
+    #     ckpts = [args.ft_path]
+    # else:
+    #     ckpts = [os.path.join(basedir, expname, f) for f in sorted(os.listdir(os.path.join(basedir, expname))) if '0.tar' in f]
+
+    # print('Found ckpts', ckpts)
+    # print('Found our super trianed model', ckpt_trained_path)
+
+    # if len(ckpts) > 0 and not args.no_reload:
+    #     ckpt_path = ckpts[-1]
+    #     print('Reloading from', ckpt_path)
+    #     ckpt = torch.load(ckpt_path)
+
+    #     ckpt_trained = torch.load(ckpt_trained_path)
+        
+    #     start = ckpt['global_step']
+    #     # optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+
+    #     # Load model
+    #     model_s.load_state_dict(ckpt_trained['network_fn_state_dict'])
+    #     model_d.load_state_dict(ckpt['network_fn_state_dict_d'])
+    #     if model_s_fine is not None:
+    #         model_s_fine.load_state_dict(ckpt_trained['network_fine_state_dict'])
+    #     if model_d_fine is not None:
+    #         model_d_fine.load_state_dict(ckpt['network_fine_state_dict_d'])
+    
     # Load checkpoints
     if args.ft_path is not None and args.ft_path!='None':
         ckpts = [args.ft_path]
     else:
-        ckpts = [os.path.join(basedir, expname, f) for f in sorted(os.listdir(os.path.join(basedir, expname))) if 'tar' in f]
+        ckpts = [os.path.join(basedir, expname, f) for f in sorted(os.listdir(os.path.join(basedir, expname))) if '0.tar' in f]
 
     print('Found ckpts', ckpts)
     if len(ckpts) > 0 and not args.no_reload:
@@ -365,14 +396,22 @@ def raw2outputs(raw_stat, raw_dyna, z_vals, rays_d_s, rays_d_d, raw_noise_std=0,
     }
 
     #### losses terms
-    H_alpha_s = alpha_s * torch.log(alpha_s) + (1 - alpha_s) * torch.log(1 - alpha_s)
-    H_alpha_d = alpha_d * torch.log(alpha_d) + (1 - alpha_d) * torch.log(1 - alpha_d)
-    alpha_s_d_sum = alpha_s + alpha_d
-    alpha_s_bar = alpha_s / alpha_s_d_sum
-    alpha_d_bar = alpha_d / alpha_s_d_sum
-    H_s_d = (alpha_s_bar * torch.log(alpha_s_bar) + alpha_d_bar * torch.log(alpha_d_bar)) * alpha_s_d_sum
-    reg_loss = torch.sum(H_alpha_s + H_alpha_d + H_s_d)
+    
+    # print(alpha_s.shape)
+    # print(alpha_s)
+    # # assert torch.all(alpha_s<=1.0), 'alpha s is problem 1'
+    # assert torch.all(alpha_s>=0.0), 'alpha s is problem 0 '
+    
+    # assert torch.all(alpha_d>=0.0) and torch.all(alpha_d<=1.0), 'alpha d is problem'
 
+    H_alpha_s = alpha_s * torch.log(alpha_s + 1e-10) + (1 - alpha_s) * torch.log(1 - alpha_s + 1e-10)
+    H_alpha_d = alpha_d * torch.log(alpha_d + 1e-10) + (1 - alpha_d) * torch.log(1 - alpha_d + 1e-10)
+    alpha_s_d_sum = alpha_s + alpha_d
+    
+    H_s_d = alpha_s * torch.log(alpha_s + 1e-10) + alpha_d * torch.log(alpha_d + 1e-10) - alpha_s_d_sum * torch.log(alpha_s_d_sum + 1e-10)
+    
+    reg_loss = (H_alpha_s + H_alpha_d + H_s_d)
+    
     return rgb_map, disp_map, acc_map, weights, depth_map, model_outputs_stat, model_outputs_dyna, reg_loss
 
 
@@ -722,13 +761,13 @@ def train():
 
     # Load data
     K = None
-    time_sequence = np.arange(15)
-    cam_sequence = np.ones(15) * 3
-    r_a_t = False
+    # time_sequence = np.arange(15)
+    # cam_sequence = np.ones(15) * 3
+    # r_a_t = False
     
-    # time_sequence = None
-    # cam_sequence = None
-    # r_a_t = True
+    time_sequence = None
+    cam_sequence = None
+    r_a_t = True
 
     images, poses, obj_poses, render_poses, render_obj_pose, hwf, i_split = load_blender_data_star(args.datadir, args.half_res, args.testskip, 
                                                     time = time_sequence, cam=cam_sequence, r_a_t = r_a_t)
@@ -877,7 +916,7 @@ def train():
     print('TEST views are', i_test)
     print('VAL views are', i_val)
 
-    start = start + 1
+    start = start + 2
     for i in trange(start, N_iters):
         time0 = time.time()
 
@@ -913,7 +952,7 @@ def train():
         optimizer.zero_grad()
         img_loss = img2mse(rgb, target_s)
         # trans = extras['raw'][...,-1]
-        reg_loss = extras['reg_loss']
+        reg_loss = torch.mean(extras['reg_loss'])
         loss = img_loss + args.beta * reg_loss
         psnr = mse2psnr(img_loss)
 
@@ -973,7 +1012,7 @@ def train():
             print('Saved test set')
 
         if i%args.i_print==0:
-            tqdm.write(f"[TRAIN] Iter: {i} Loss: {loss.item()}  PSNR: {psnr.item()}")
+            tqdm.write(f"[TRAIN] Iter: {i} Loss: {loss.item(), reg_loss.item()}  PSNR: {psnr.item()}")
 
         global_step += 1
 
