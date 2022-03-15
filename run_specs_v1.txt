@@ -1,0 +1,36 @@
+python run_nerf_star.py --config configs/lego_ball.txt --i_video 10000 --i_testset 7000 --N_iters 20000 --i_weights 5000
+
+./data/nerf_synthetic/lego_ball_star/./test/r_1_t_1.png 107
+./data/nerf_synthetic/lego_ball_star/./test/r_6_t_1.png 108
+./data/nerf_synthetic/lego_ball_star/./test/r_12_t_1.png 109
+./data/nerf_synthetic/lego_ball_star/./test/r_6_t_2.png 110
+./data/nerf_synthetic/lego_ball_star/./test/r_13_t_2.png 111
+./data/nerf_synthetic/lego_ball_star/./test/r_7_t_3.png 112
+./data/nerf_synthetic/lego_ball_star/./test/r_1_t_4.png 113
+./data/nerf_synthetic/lego_ball_star/./test/r_6_t_4.png 114
+./data/nerf_synthetic/lego_ball_star/./test/r_2_t_5.png 115
+./data/nerf_synthetic/lego_ball_star/./test/r_11_t_5.png 116
+./data/nerf_synthetic/lego_ball_star/./test/r_1_t_6.png 117
+./data/nerf_synthetic/lego_ball_star/./test/r_13_t_6.png 118
+./data/nerf_synthetic/lego_ball_star/./test/r_6_t_7.png 119
+./data/nerf_synthetic/lego_ball_star/./test/r_0_t_8.png 120
+./data/nerf_synthetic/lego_ball_star/./test/r_10_t_8.png 121
+./data/nerf_synthetic/lego_ball_star/./test/r_6_t_9.png 122
+./data/nerf_synthetic/lego_ball_star/./test/r_8_t_10.png 123
+./data/nerf_synthetic/lego_ball_star/./test/r_4_t_11.png 124
+./data/nerf_synthetic/lego_ball_star/./test/r_2_t_12.png 125
+./data/nerf_synthetic/lego_ball_star/./test/r_7_t_12.png 126
+./data/nerf_synthetic/lego_ball_star/./test/r_8_t_13.png 127
+./data/nerf_synthetic/lego_ball_star/./test/r_14_t_13.png 128
+./data/nerf_synthetic/lego_ball_star/./test/r_9_t_14.png 129
+./data/nerf_synthetic/lego_ball_star/./test/r_2_t_15.png 130
+./data/nerf_synthetic/lego_ball_star/./test/r_11_t_15.png 131
+
+python run_nerf_star_more_loss.py --config configs/lego_ball_with_cam_time.txt --i_video 500 --i_testset 500 --N_iters 40000 --ft_path_trained trained_lego --i_print 50
+
+
+final command:
+
+python run_nerf_star_more_loss.py --config configs/lego_ball_with_cam_time.txt --N_iters 40000 --ft_path_trained trained_lego --i_weights 1000
+
+[TRAIN] Iter: 33000 Loss: (0.0026918486692011356, -0.6412462592124939)  PSNR: 31.63046646118164
