@@ -148,8 +148,8 @@ def load_blender_data_star(basedir, half_res=False, testskip=1, time=None, cam=N
             
         for frame in meta['frames'][::skip]:
             fname = os.path.join(basedir, frame['file_path'] + '.png')
-            if s == 'test':
-                print(fname)
+            # if s == 'test':
+            #     print(fname)
             T = np.array(frame['object_transformation_matrix'])
             T[:3,:3] *= 10.0
             if r_a_t and render_obj_pose is None:
