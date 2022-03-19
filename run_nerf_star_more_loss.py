@@ -287,6 +287,17 @@ def create_nerf_star(args):
         'raw_noise_std' : args.raw_noise_std,
     }
 
+    # torch.save({
+    #     # 'global_step': 1000,
+    #     # 'network_fn_state_dict_s': render_kwargs_train['network_fn_s'].state_dict(),
+    #     # 'state_dict': render_kwargs_train['network_fine_s'].state_dict(),
+    #     # 'network_fn_state_dict_d': render_kwargs_train['network_fn_d'].state_dict(),
+    #     'state_dict': render_kwargs_train['network_fine_d'].state_dict(),
+    #     # 'optimizer_state_dict': optimizer.state_dict(),
+    # }, './old_format_ball_bad.tar', _use_new_zipfile_serialization=False)
+    # print('Saved checkpoints at ./old_format_ball_bad.tar')
+    # sys.exit()
+
     # NDC only good for LLFF-style forward facing data
     if args.dataset_type != 'llff' or args.no_ndc:
         print('Not ndc!')
@@ -499,6 +510,10 @@ def render_rays(ray_batch_stat, ray_batch_dyna,
 #     raw = run_network(pts)
     raw_stat = network_query_fn(pts_stat, viewdirs_s, network_fn_s)
     raw_dyna = network_query_fn(pts_dyna, viewdirs_d, network_fn_d)
+
+    mask = torch.any((pts_dyna <= -0.15) | (pts_dyna >= 0.15) , 2)
+    # print(mask.shape)
+    raw_dyna[mask] = torch.Tensor([0.0,0.0,0.0,0.0])
     
     rgb_map, disp_map, acc_map, weights, depth_map, model_outputs_stat, model_outputs_dyna, reg_loss = raw2outputs(raw_stat, raw_dyna, z_vals, rays_d_s, rays_d_d, raw_noise_std, white_bkgd, pytest=pytest)
 
@@ -520,6 +535,10 @@ def render_rays(ray_batch_stat, ray_batch_dyna,
 
         raw_stat = network_query_fn(pts_stat, viewdirs_s, run_fn_s)
         raw_dyna = network_query_fn(pts_dyna, viewdirs_d, run_fn_d)
+
+        mask = torch.any((pts_dyna <= -0.15) | (pts_dyna >= 0.15) , 2)
+        # print(mask.shape)
+        raw_dyna[mask] = torch.Tensor([0.0,0.0,0.0,0.0])
 
         rgb_map, disp_map, acc_map, weights, depth_map, model_outputs_stat, model_outputs_dyna, reg_loss = raw2outputs(raw_stat, raw_dyna, z_vals, rays_d_s, rays_d_d, raw_noise_std, white_bkgd, pytest=pytest)
 
@@ -842,7 +861,7 @@ def train():
                 # Default is smoother render_poses path
                 images = None
 
-            testsavedir = os.path.join(basedir, expname, 'renderonly_{}_{:06d}'.format('test' if args.render_test else 'path', start))
+            testsavedir = os.path.join(basedir, expname, 'renderonly_{}_{:06d}'.format('test_w_bound' if args.render_test else 'path', start))
             os.makedirs(testsavedir, exist_ok=True)
             print('test poses shape', render_poses.shape)
 
